@@ -386,6 +386,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         login.state = (launchAtLoginState?() ?? false) ? .on : .off
         menu.addItem(login)
 
+        let ping = NSMenuItem(title: "Ping Claude Code When Login Expires",
+                              action: #selector(togglePingClaude), keyEquivalent: "")
+        ping.target = self
+        ping.state = Settings.pingClaudeOnAuthError ? .on : .off
+        ping.toolTip = "On a Claude 401/403, run `claude -p` so Claude Code refreshes its token. Uses a little plan usage."
+        menu.addItem(ping)
+
         let refresh = NSMenuItem(title: "Refresh Now", action: #selector(refresh), keyEquivalent: "r")
         refresh.target = self
         menu.addItem(refresh)
@@ -457,6 +464,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func refresh() { onRefresh?() }
     @objc private func restart() { onRestart?() }
     @objc private func toggleLaunchAtLogin() { _ = onToggleLaunchAtLogin?() }
+
+    @objc private func togglePingClaude() {
+        Settings.pingClaudeOnAuthError.toggle()
+        Log.log("claude: ping on auth error = \(Settings.pingClaudeOnAuthError)")
+        rebuildMenu(now: Date())
+    }
 
     @objc private func toggleProvider(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String, let id = ProviderID(rawValue: raw) else { return }

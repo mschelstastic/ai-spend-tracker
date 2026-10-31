@@ -154,6 +154,7 @@ enum Settings {
     private static let spendDisplayKey = "aiut.spendDisplayMode"
     private static let trayStyleKey = "aiut.trayStyle"
     private static let hiddenScopedWindowsKey = "aiut.hiddenScopedWindows"
+    private static let pingClaudeKey = "aiut.pingClaudeOnAuthError"
 
     /// Default combined spend-pie total ($2500). Always set — the spend pie has a
     /// denominator even before the user customizes it.
@@ -179,6 +180,13 @@ enum Settings {
     static var hiddenScopedWindows: Set<String> {
         get { Set(UserDefaults.standard.stringArray(forKey: hiddenScopedWindowsKey) ?? []) }
         set { UserDefaults.standard.set(newValue.sorted(), forKey: hiddenScopedWindowsKey) }
+    }
+
+    /// On a Claude 401/403, run `claude -p` so Claude Code refreshes its token, then
+    /// retry (see `ClaudeCLIPing`). Off by default: each ping spends a little plan usage.
+    static var pingClaudeOnAuthError: Bool {
+        get { UserDefaults.standard.bool(forKey: pingClaudeKey) }
+        set { UserDefaults.standard.set(newValue, forKey: pingClaudeKey) }
     }
 
     static var trayStyle: TrayStyle {

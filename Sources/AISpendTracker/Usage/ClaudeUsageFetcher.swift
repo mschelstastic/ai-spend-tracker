@@ -58,7 +58,28 @@ final class ClaudeUsageFetcher: UsageProvider, @unchecked Sendable {
         }
     }
 
+    /// Spaces out pings, so "Refresh Now" mashing or a token that a ping can't fix
+    /// doesn't run `claude -p` over and over.
+    private let pingGate = CodexUsageFetcher.RefreshGate(cooldown: 60)
+
     func fetch() async throws -> FetchResult {
+        do {
+            return try await fetchUsage()
+        } catch let denied as UsageAPIError where [401, 403].contains(denied.status) {
+            guard Settings.pingClaudeOnAuthError, await pingGate.claim() else { throw denied }
+            do {
+                try await ClaudeCLIPing.ping()
+                Log.log("usage[claude]: \(denied.status) — pinged claude -p, retrying")
+            } catch {
+                Log.log("usage[claude]: \(denied.status) — claude -p ping failed: \(error)")
+            }
+            // Re-reads the Keychain, which Claude Code has just refreshed. Exactly one retry.
+            return try await fetchUsage()
+        }
+    }
+
+    /// One request to the usage endpoint with whatever token the Keychain holds now.
+    private func fetchUsage() async throws -> FetchResult {
         let account = try Self.readSignedInAccount()
         let token = try Self.readAccessToken()
 
